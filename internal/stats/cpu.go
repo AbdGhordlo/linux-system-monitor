@@ -16,16 +16,16 @@ type CPUTimes struct {
 	// "cpu" shows the total combined stats for all cores;
 	// "cpu0", "cpu1", etc., track each individual core.
 	Name      string
-	User      uint64
-	Nice      uint64
-	System    uint64
-	Idle      uint64
-	IOWait    uint64
-	IRQ       uint64
-	SoftIRQ   uint64
-	Steal     uint64
-	Guest     uint64
-	GuestNice uint64
+	User      uint64 // Time spent in user space (normal priority)
+	Nice      uint64 // Time spent in user space with low priority (niced)
+	System    uint64 // Time spent in kernel space
+	Idle      uint64 // Time spent doing nothing
+	IOWait    uint64 // Time spent waiting for I/O operations to complete
+	IRQ       uint64 // Time spent servicing hardware interrupts
+	SoftIRQ   uint64 // Time spent servicing software interrupts
+	Steal     uint64 // Time stolen by the hypervisor (in virtualized environments)
+	Guest     uint64 // Time spent running a virtual CPU for guest operating systems
+	GuestNice uint64 // Time spent running a low-priority guest operating system
 }
 
 // Total returns the sum of every counted jiffie, used as the denominator
