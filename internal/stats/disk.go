@@ -1,11 +1,23 @@
 // Package stats provides collectors that read live system metrics directly
-// from the Linux /proc filesystem.
+// from the Linux filesystem and kernel APIs.
+//
+// This file implements two distinct, independent features related to disks:
+//
+// 1. Disk I/O Counters (Performance Metrics)
+//   - Tracks cumulative read/write operations and sector throughput.
+//   - Parsed directly from /proc/diskstats for top-level block devices.
+//   - See: DiskIO, ReadDiskIO()
+//
+// 2. Disk Usage (Capacity Metrics)
+//   - Tracks total, free, and used filesystem space for a given mount point.
+//   - Leverages the low-level statfs system call (similar to the 'df' command).
+//   - See: DiskUsage, ReadDiskUsage()
 package stats
 
 import (
-	"bufio" // Used to read /proc/stat line by line using a Scanner
+	"bufio" // Used to read /proc/diskstats line by line using a Scanner
 	"fmt"
-	"os" // Used to open /proc/stat
+	"os" // Used to open /proc/diskstats
 	"strconv"
 	"strings"
 	"syscall" // Used for the statfs syscall to get filesystem stats
@@ -48,11 +60,14 @@ func ReadDiskIO() ([]DiskIO, error) {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
+		// Format: major minor name rd_ios rd_merges rd_sectors rd_ticks
+		//         wr_ios wr_merges wr_sectors wr_ticks ...
 		if len(fields) < 14 {
 			continue
 		}
 
 		name := fields[2]
+		// Only include whole-disk devices, skipping partitions and virtual devices.
 		if !isWholeDisk(name) {
 			continue
 		}
@@ -104,10 +119,10 @@ func isWholeDisk(name string) bool {
 	}
 }
 
-// This represents filesystem space utilization for a specific mount point,
-// usually gathered via the statfs system call.
+// Represents filesystem capacity for a mount point supplied by the caller.
+// The statistics are retrieved using the statfs system call.
 type DiskUsage struct {
-	// The absolute directory path where the filesystem is mounted (e.g., "/").
+	// The path supplied to ReadDiskUsage (typically a mount point such as "/" or "/home").
 	Path string
 	// The total storage capacity of the filesystem in bytes.
 	TotalBytes uint64
