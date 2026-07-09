@@ -1,0 +1,30 @@
+#!/usr/bin/make -f
+# Canonical's packaging uses debhelper 13 with the golang-go toolchain.
+# The build downloads no network dependencies: go.sum pins all modules and
+# the offline build cache is populated by the CI prior to package build.
+
+export DH_VERBOSE = 1
+export GOFLAGS = -mod=readonly
+export GOPATH  = $(CURDIR)/.gopath
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	mkdir -p $(GOPATH)
+	go build \
+		-trimpath \
+		-ldflags="-s -w -X main.version=$(shell dpkg-parsechangelog -S Version)" \
+		-o $(CURDIR)/sysmon \
+		./cmd/sysmon
+
+override_dh_auto_test:
+	go test ./internal/...
+
+override_dh_auto_install:
+	install -D -m 0755 $(CURDIR)/sysmon \
+		$(CURDIR)/debian/sysmon/usr/bin/sysmon
+
+override_dh_auto_clean:
+	go clean ./...
+	rm -f sysmon
