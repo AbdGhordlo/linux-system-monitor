@@ -4,10 +4,10 @@ Priority: optional
 Maintainer: Your Name <you@example.com>
 Build-Depends: debhelper-compat (= 13), golang-go (>= 1.22)
 Standards-Version: 4.7.0
-Homepage: https://github.com/yourusername/sysmon
+Homepage: https://github.com/AbdGhordlo/linux-system-monitor
 Rules-Requires-Root: no
-Vcs-Browser: https://github.com/yourusername/sysmon
-Vcs-Git: https://github.com/yourusername/sysmon.git
+Vcs-Browser: https://github.com/AbdGhordlo/linux-system-monitor
+Vcs-Git: https://github.com/AbdGhordlo/linux-system-monitor.git
 
 Package: sysmon
 Architecture: amd64 arm64

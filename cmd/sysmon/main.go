@@ -65,6 +65,9 @@ func run(interval time.Duration, mountPath string) error {
 	defer ticker.Stop()
 
 	for {
+		// Wait for the next tick before taking the first sample.x
+		<-ticker.C
+
 		// Read the current CPU, memory, disk, and network stats.
 		curCPU, err := stats.ReadCPUTimes()
 		if err != nil {
@@ -87,21 +90,18 @@ func run(interval time.Duration, mountPath string) error {
 		now := time.Now()
 		elapsed := now.Sub(lastSample).Seconds()
 		cpuPct := stats.CPUPercent(prevCPU, curCPU)
-		netRates := stats.NetThroughput(prevNet, curNet, elapsed)
+		netRates := stats.ComputeNetThroughput(prevNet, curNet, elapsed)
 
 		// Render the updated stats to the terminal.
 		render(cpuPct, mem, diskUsage, netRates)
 
 		// Update the previous stats and timestamp for the next iteration.
 		prevCPU, prevNet, lastSample = curCPU, curNet, now
-
-		// Wait for the next tick before repeating the loop.
-		<-ticker.C
 	}
 }
 
 // Renders the system stats to the terminal.
-func render(cpuPct map[string]float64, mem stats.MemInfo, disk stats.DiskUsage, net map[string]struct{ RxBps, TxBps float64 }) {
+func render(cpuPct map[string]float64, mem stats.MemInfo, disk stats.DiskUsage, net map[string]stats.NetThroughput) {
 	var b strings.Builder
 
 	// Erase the terminal screen and move cursor to top left.

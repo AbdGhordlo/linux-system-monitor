@@ -1,10 +1,10 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: sysmon
 Upstream-Contact: Your Name <you@example.com>
-Source: https://github.com/yourusername/sysmon
+Source: https://github.com/AbdGhordlo/linux-system-monitor
 
 Files: *
-Copyright: 2025 Your Name <you@example.com>
+Copyright: 2026 Your Name <you@example.com>
 License: MIT
 
 License: MIT
