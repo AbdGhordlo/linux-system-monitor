@@ -1,0 +1,26 @@
+Source: sysmon
+Section: utils
+Priority: optional
+Maintainer: Your Name <you@example.com>
+Build-Depends: debhelper-compat (= 13), golang-go (>= 1.22)
+Standards-Version: 4.7.0
+Homepage: https://github.com/yourusername/sysmon
+Rules-Requires-Root: no
+Vcs-Browser: https://github.com/yourusername/sysmon
+Vcs-Git: https://github.com/yourusername/sysmon.git
+
+Package: sysmon
+Architecture: amd64 arm64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Lightweight terminal system monitor for Linux
+ sysmon reads CPU, memory, disk, and network metrics directly from the
+ Linux /proc filesystem and displays them as a live-updating terminal
+ dashboard. It requires no external runtime dependencies and uses no
+ shell subprocesses; all data is parsed natively in Go.
+ .
+ Features:
+  - Per-core and aggregate CPU utilisation
+  - Memory and swap usage (using MemAvailable, matching free -h)
+  - Disk usage via statfs(2) and per-device I/O from /proc/diskstats
+  - Per-interface network throughput from /proc/net/dev
+  - Configurable refresh interval via -interval flag

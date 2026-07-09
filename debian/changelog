@@ -1,0 +1,8 @@
+sysmon (0.1.0-1) unstable; urgency=low
+
+  * Initial release.
+  * Reads CPU, memory, disk, and network metrics directly from /proc.
+  * Supports configurable refresh interval via -interval flag.
+  * Packages as a standalone binary with no runtime dependencies.
+
+ -- Your Name <you@example.com>  Mon, 07 Jul 2025 12:00:00 +0000
