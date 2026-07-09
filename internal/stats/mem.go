@@ -1,10 +1,11 @@
-// Package stats provides collectors that read live system metrics directly
-// from the Linux /proc filesystem.
+// Package stats provides collectors that read live system metrics from
+// Linux kernel interfaces such as the /proc filesystem and statfs.
 package stats
 
 import (
 	"bufio" // Used to read /proc/meminfo line by line using a Scanner
 	"fmt"
+	"io" // Provides io.Reader for parsing from any input source
 	"os" // Used to open /proc/meminfo
 	"strconv"
 	"strings"
@@ -67,19 +68,20 @@ func ReadMemInfo() (MemInfo, error) {
 	}
 	defer f.Close()
 
-	return parseMemInfo(f)
+	return ParseMemInfo(f)
 }
 
-func parseMemInfo(r *os.File) (MemInfo, error) {
-	fields := map[string]*uint64{}
+// ParseMemInfo is the testable core; accepts any io.Reader.
+func ParseMemInfo(r io.Reader) (MemInfo, error) {
+	targets := map[string]*uint64{}
 	var mi MemInfo
-	fields["MemTotal"] = &mi.TotalKB
-	fields["MemFree"] = &mi.FreeKB
-	fields["MemAvailable"] = &mi.AvailableKB
-	fields["Buffers"] = &mi.BuffersKB
-	fields["Cached"] = &mi.CachedKB
-	fields["SwapTotal"] = &mi.SwapTotalKB
-	fields["SwapFree"] = &mi.SwapFreeKB
+	targets["MemTotal"] = &mi.TotalKB
+	targets["MemFree"] = &mi.FreeKB
+	targets["MemAvailable"] = &mi.AvailableKB
+	targets["Buffers"] = &mi.BuffersKB
+	targets["Cached"] = &mi.CachedKB
+	targets["SwapTotal"] = &mi.SwapTotalKB
+	targets["SwapFree"] = &mi.SwapFreeKB
 
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
@@ -90,7 +92,7 @@ func parseMemInfo(r *os.File) (MemInfo, error) {
 		}
 
 		key := line[:colon]
-		target, ok := fields[key]
+		target, ok := targets[key]
 		if !ok {
 			continue // not a field we care about
 		}

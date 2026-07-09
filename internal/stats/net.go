@@ -5,6 +5,7 @@ package stats
 import (
 	"bufio" // Used to read /proc/net/dev line by line using a Scanner
 	"fmt"
+	"io" // Provides io.Reader for parsing from any input source
 	"os" // Used to open /proc/net/dev
 	"strconv"
 	"strings"
@@ -29,8 +30,13 @@ func ReadNetIO() ([]NetIO, error) {
 	}
 	defer f.Close()
 
+	return ParseNetIO(f)
+}
+
+// ParseNetIO is the testable core; accepts any io.Reader.
+func ParseNetIO(r io.Reader) ([]NetIO, error) {
 	var result []NetIO
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(r)
 
 	lineNum := 0
 	for scanner.Scan() {
@@ -47,6 +53,7 @@ func ReadNetIO() ([]NetIO, error) {
 
 		iface := strings.TrimSpace(line[:colon])
 		fields := strings.Fields(line[colon+1:])
+
 		// Layout after the colon: rx_bytes rx_packets rx_errs rx_drop
 		// rx_fifo rx_frame rx_compressed rx_multicast tx_bytes tx_packets ...
 		if len(fields) < 10 {
@@ -77,15 +84,21 @@ func ReadNetIO() ([]NetIO, error) {
 	return result, nil
 }
 
-// NetThroughput computes bytes/sec for each interface present in both
-// samples, given the elapsed seconds between when prev and cur were read.
-func NetThroughput(prev, cur []NetIO, elapsedSeconds float64) map[string]struct{ RxBps, TxBps float64 } {
+// NetThroughput holds the per-second rates derived from two NetIO samples.
+type NetThroughput struct {
+	RxBps float64
+	TxBps float64
+}
+
+// ComputeNetThroughput returns bytes/sec for each interface present in both
+// samples. elapsedSeconds is the wall-clock gap between the two reads.
+func ComputeNetThroughput(prev, cur []NetIO, elapsedSeconds float64) map[string]NetThroughput {
 	prevByName := make(map[string]NetIO, len(prev))
 	for _, p := range prev {
 		prevByName[p.Interface] = p
 	}
 
-	result := make(map[string]struct{ RxBps, TxBps float64 }, len(cur))
+	result := make(map[string]NetThroughput, len(cur))
 	if elapsedSeconds <= 0 {
 		return result
 	}
@@ -95,6 +108,7 @@ func NetThroughput(prev, cur []NetIO, elapsedSeconds float64) map[string]struct{
 		if !ok {
 			continue
 		}
+
 		// Counters can wrap or reset (interface replaced); guard against
 		// a negative delta producing a nonsensical huge uint64 underflow.
 		var rxDelta, txDelta uint64
@@ -105,7 +119,7 @@ func NetThroughput(prev, cur []NetIO, elapsedSeconds float64) map[string]struct{
 			txDelta = c.TxBytes - p.TxBytes
 		}
 
-		result[c.Interface] = struct{ RxBps, TxBps float64 }{
+		result[c.Interface] = NetThroughput{
 			RxBps: float64(rxDelta) / elapsedSeconds,
 			TxBps: float64(txDelta) / elapsedSeconds,
 		}
