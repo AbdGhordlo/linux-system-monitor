@@ -1,0 +1,31 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck        # check error return values are handled
+    - gosimple        # simplification suggestions
+    - govet           # go vet checks
+    - ineffassign     # detect ineffectual assignments
+    - staticcheck     # broad static analysis (SA, S, ST rules)
+    - unused          # unused code
+    - gofmt           # enforce formatting
+    - goimports       # enforce import ordering
+    - misspell        # catch common misspellings in comments/strings
+    - godoc           # enforce package-level doc comments
+    - nilerr          # catch `if err != nil { return nil, err }` anti-patterns
+    - bodyclose       # check http response bodies are closed
+    - exhaustive      # check switch statements on enum types are exhaustive
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  govet:
+    enable:
+      - shadow         # warn about variable shadowing
+
+issues:
+  exclude-rules:
+    # Test files don't need godoc on every helper
+    - path: "_test\\.go"
+      linters:
+        - godoc
