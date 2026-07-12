@@ -15,10 +15,10 @@ import (
 
 // ANSI escape codes for terminal control sequences.
 const (
-	clearScreen = "\033[2J"
-	cursorHome  = "\033[H"
-	hideCursor  = "\033[?25l"
-	showCursor  = "\033[?25h"
+	clearDown  = "\033[J"
+	cursorHome = "\033[H"
+	hideCursor = "\033[?25l"
+	showCursor = "\033[?25h"
 )
 
 func main() {
@@ -104,8 +104,8 @@ func run(interval time.Duration, mountPath string) error {
 func render(cpuPct map[string]float64, mem stats.MemInfo, disk stats.DiskUsage, net map[string]stats.NetThroughput) {
 	var b strings.Builder
 
-	// Erase the terminal screen and move cursor to top left.
-	b.WriteString(clearScreen + cursorHome)
+	// Move cursor to top left, THEN clear everything below it.
+	b.WriteString(cursorHome + clearDown)
 
 	// Title
 	b.WriteString("sysmon — live system monitor (Ctrl+C to quit)\n")
