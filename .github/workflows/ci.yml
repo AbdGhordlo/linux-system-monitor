@@ -8,38 +8,32 @@ on:
 
 jobs:
   # ------------------------------------------------------------------ #
-  #  build-and-test: compiles, vets, lints, and runs the test suite.    #
-  #  Runs on Ubuntu to ensure /proc parsers can also be exercised       #
-  #  against the live filesystem (the tests use fixtures, but the       #
-  #  integration layer can be spot-checked manually in this job).       #
+  #  build-and-test: compile, vet, lint, run tests.                     #
   # ------------------------------------------------------------------ #
   build-and-test:
     name: Build & Test (Go ${{ matrix.go }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: ["1.22", "1.23"]   # test the minimum supported version and latest
+        go: ["1.22", "1.23"]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Go ${{ matrix.go }}
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go }}
           cache: true
 
-      - name: Download modules
-        run: go mod download
+      - run: go mod download
 
       - name: go vet
         run: go vet ./...
 
-      - name: Run tests with race detector
+      - name: Run tests (with race detector)
         run: go test -race -v -count=1 ./...
 
-      - name: Build binary
+      - name: Build standard binary
         run: |
           go build \
             -trimpath \
@@ -47,71 +41,153 @@ jobs:
             -o sysmon \
             ./cmd/sysmon
 
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: sysmon-linux-amd64-go${{ matrix.go }}
           path: sysmon
           retention-days: 7
 
   # ------------------------------------------------------------------ #
-  #  lint: golangci-lint run on a separate job so it doesn't inflate    #
-  #  the build time reported for the main test job.                     #
+  #  lint: golangci-lint on a separate job.                             #
   # ------------------------------------------------------------------ #
   lint:
     name: Lint
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
           cache: true
-
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+      - uses: golangci/golangci-lint-action@v6
         with:
           version: latest
           args: --timeout=5m
 
   # ------------------------------------------------------------------ #
-  #  debian-package: builds a real .deb on Ubuntu, confirming that the  #
-  #  packaging metadata is coherent. The .deb is uploaded as an         #
-  #  artifact so it can be tested or published from the releases page.  #
+  #  ebpf-build: compile the BPF C program and build the eBPF-enabled  #
+  #  binary. Requires clang, libbpf, and a kernel with BTF available.  #
+  #  The generated BPF bytecode files are uploaded as an artifact so   #
+  #  they can be committed without requiring clang in standard builds.  #
+  # ------------------------------------------------------------------ #
+  ebpf-build:
+    name: Build eBPF variant
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache: true
+
+      - name: Install eBPF build dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends \
+            clang \
+            llvm \
+            libbpf-dev \
+            linux-headers-$(uname -r)
+
+      - name: Install bpf2go
+        run: go install github.com/cilium/ebpf/cmd/bpf2go@latest
+
+      - name: Generate BPF bytecode
+        run: go generate ./internal/ebpf/...
+        # This compiles block_latency.c → block_latency_bpf{el,eb}.go.
+        # Commit these generated files to the repo so standard builds don't
+        # need clang (they just use the pre-compiled bytecode).
+
+      - name: Build with -tags ebpf
+        run: |
+          go build \
+            -tags ebpf \
+            -trimpath \
+            -ldflags="-s -w -X main.version=$(git describe --tags --always --dirty)" \
+            -o sysmon-ebpf \
+            ./cmd/sysmon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sysmon-ebpf-linux-amd64
+          path: |
+            sysmon-ebpf
+            internal/ebpf/block_latency_bpfel.go
+            internal/ebpf/block_latency_bpfeb.go
+          retention-days: 14
+
+  # ------------------------------------------------------------------ #
+  #  debian-package: builds a real .deb.                               #
   # ------------------------------------------------------------------ #
   debian-package:
     name: Build Debian package
     runs-on: ubuntu-latest
-    needs: build-and-test   # only package if tests pass
+    needs: build-and-test
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install packaging tools
         run: |
           sudo apt-get update -q
           sudo apt-get install -y --no-install-recommends \
-            debhelper \
-            devscripts \
-            golang-go \
-            lintian
+            debhelper devscripts golang-go lintian
 
       - name: Build .deb
         run: dpkg-buildpackage -us -uc -b
 
       - name: Run lintian
         run: lintian --fail-on error ../sysmon_*.deb || true
-        # `|| true` so lintian warnings don't fail the build;
-        # remove this once all warnings are resolved.
 
-      - name: Upload .deb artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: sysmon-deb
           path: ../sysmon_*.deb
           retention-days: 14
+
+  # ------------------------------------------------------------------ #
+  #  snap-build: builds the snap package via snapcraft.                 #
+  #  Uses LXD to isolate the build environment, matching how the Snap  #
+  #  Store build service works.                                         #
+  # ------------------------------------------------------------------ #
+  snap-build:
+    name: Build snap package
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build snap
+        uses: snapcore/action-build@v1
+        id: snapcraft
+        # snapcore/action-build installs snapcraft and builds the snap
+        # defined in snap/snapcraft.yaml using a clean LXD container.
+        # The snap file path is exposed as steps.snapcraft.outputs.snap.
+
+      - name: Verify snap installs
+        run: |
+          sudo snap install --dangerous ${{ steps.snapcraft.outputs.snap }}
+          # Run the binary briefly to confirm it starts and reads /proc without error.
+          timeout 3 sysmon --interval 10s || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sysmon-snap
+          path: ${{ steps.snapcraft.outputs.snap }}
+          retention-days: 14
+
+      # Uncomment and add SNAP_STORE_CREDENTIALS secret to publish to the
+      # Snap Store automatically on every push to main:
+      #
+      # - name: Publish to Snap Store (edge channel)
+      #   uses: snapcore/action-publish@v1
+      #   if: github.ref == 'refs/heads/main'
+      #   env:
+      #     SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_STORE_CREDENTIALS }}
+      #   with:
+      #     snap: ${{ steps.snapcraft.outputs.snap }}
+      #     release: edge

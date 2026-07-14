@@ -1,0 +1,62 @@
+name: sysmon
+base: core24          # Ubuntu 24.04 LTS runtime base — matches current Ubuntu LTS
+version: '0.1.0'
+summary: Lightweight terminal system monitor for Linux
+description: |
+  sysmon displays live CPU, memory, disk and network metrics in the terminal,
+  reading everything directly from the Linux /proc filesystem rather than
+  shelling out to other tools. No polling via vmstat, df or ip — pure kernel
+  interface reads, keeping overhead minimal and making it suitable for
+  resource-constrained environments.
+
+  Usage:
+    sysmon                         # refresh every 2 seconds
+    sysmon --interval 1s           # faster refresh
+    sysmon --interval 1s --path /  # specify mount point for disk stats
+  
+  Optional:
+    When built with the "ebpf" build tag, sysmon also supports the
+    --ebpf flag to display a block I/O latency histogram
+    (requires root and a compatible Linux kernel).
+
+grade: stable
+confinement: strict
+
+# Plugs declare the system interfaces the snap is allowed to use.
+# strict confinement means these must be listed explicitly.
+plugs:
+  # Read /proc/stat, /proc/meminfo, /proc/diskstats, /proc/net/dev
+  system-files:
+    read:
+      - /proc/stat
+      - /proc/meminfo
+      - /proc/diskstats
+      - /proc/net/dev
+
+apps:
+  sysmon:
+    command: bin/sysmon
+    plugs:
+      - system-files   # /proc access declared above
+      - network        # /proc/net/dev interface enumeration
+      - hardware-observe  # statfs access for disk capacity metrics
+
+parts:
+  sysmon:
+    plugin: go
+    source: .
+    source-type: local
+    build-snaps:
+      - go/1.22/stable    # pin the Go toolchain version used for the build
+    build-packages:
+      - gcc               # needed for CGo even if we don't use it (linker)
+    override-build: |
+      # Inject the version string from the snapcraft version field.
+      craftctl default
+      go build \
+        -trimpath \
+        -ldflags="-s -w -X main.version=${SNAPCRAFT_PROJECT_VERSION}" \
+        -o "${SNAPCRAFT_PART_INSTALL}/bin/sysmon" \
+        ./cmd/sysmon
+    prime:
+      - bin/sysmon   # only include the binary in the final snap; no build artefacts
