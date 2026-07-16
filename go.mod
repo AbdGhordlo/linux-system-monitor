@@ -2,8 +2,11 @@ module github.com/AbdGhordlo/linux-system-monitor
 
 go 1.26.4
 
+// Only required when building with -tags ebpf.
+// Run `go mod tidy` after installing the ebpf tag dependencies.
+require github.com/cilium/ebpf v0.16.0
+
 require (
-	// Only required when building with -tags ebpf.
-	// Run `go mod tidy` after installing the ebpf tag dependencies.
-	github.com/cilium/ebpf v0.16.0
+	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2 // indirect
+	golang.org/x/sys v0.20.0 // indirect
 )

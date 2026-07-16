@@ -1,1 +1,11 @@
 .gopath/
+
+# Build outputs
+sysmon
+
+# Debian packaging artifacts
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/*.substvars
+debian/sysmon/
