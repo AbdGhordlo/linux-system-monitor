@@ -9,3 +9,6 @@ debian/debhelper-build-stamp
 debian/files
 debian/*.substvars
 debian/sysmon/
+
+# eBPF intermediate objects
+internal/ebpf/*.o

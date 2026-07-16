@@ -13,7 +13,7 @@
 // Each bucket i represents requests whose latency fell in the range
 // [2^(i-1) µs, 2^i µs). Bucket 0 catches anything < 1 µs.
 
-#include <vmlinux.h>          // BTF-derived kernel type definitions (CO-RE)
+#include "vmlinux.h"          // BTF-derived kernel type definitions (CO-RE)
 #include <bpf/bpf_helpers.h>  // bpf_ktime_get_ns, bpf_map_*, bpf_printk
 #include <bpf/bpf_tracing.h>  // SEC, tracepoint context helpers
 
