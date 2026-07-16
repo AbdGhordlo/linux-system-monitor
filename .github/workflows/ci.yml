@@ -136,16 +136,18 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             debhelper devscripts golang-go lintian build-essential
 
-      - name: Build .deb
-        run: dpkg-buildpackage -us -uc -b
+      - name: Build .deb and move to workspace
+        run: |
+          dpkg-buildpackage -us -uc -b
+          mv ../sysmon_*.deb ./
 
       - name: Run lintian
-        run: lintian --fail-on error ../sysmon_*.deb || true
+        run: lintian --fail-on error ./sysmon_*.deb || true
 
       - uses: actions/upload-artifact@v4
         with:
           name: sysmon-deb
-          path: ../sysmon_*.deb
+          path: sysmon_*.deb  # Removed the "../" prefix
           retention-days: 14
 
   # ------------------------------------------------------------------ #
