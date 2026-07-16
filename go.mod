@@ -1,6 +1,6 @@
 module github.com/AbdGhordlo/linux-system-monitor
 
-go 1.26.4
+go 1.23
 
 // Only required when building with -tags ebpf.
 // Run `go mod tidy` after installing the ebpf tag dependencies.

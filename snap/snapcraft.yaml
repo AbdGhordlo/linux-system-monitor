@@ -47,7 +47,7 @@ parts:
     source: .
     source-type: local
     build-snaps:
-      - go/1.22/stable    # pin the Go toolchain version used for the build
+      - go/1.23/stable    # pin the Go toolchain version used for the build
     build-packages:
       - gcc               # needed for CGo even if we don't use it (linker)
     override-build: |
