@@ -181,15 +181,3 @@ jobs:
           name: sysmon-snap
           path: ${{ steps.snapcraft.outputs.snap }}
           retention-days: 14
-
-      # Uncomment and add SNAP_STORE_CREDENTIALS secret to publish to the
-      # Snap Store automatically on every push to main:
-      #
-      # - name: Publish to Snap Store (edge channel)
-      #   uses: snapcore/action-publish@v1
-      #   if: github.ref == 'refs/heads/main'
-      #   env:
-      #     SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_STORE_CREDENTIALS }}
-      #   with:
-      #     snap: ${{ steps.snapcraft.outputs.snap }}
-      #     release: edge

@@ -11,7 +11,7 @@ Vcs-Git: https://github.com/AbdGhordlo/linux-system-monitor.git
 
 Package: sysmon
 Architecture: amd64 arm64
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${misc:Depends}
 Description: Lightweight terminal system monitor for Linux
  sysmon reads CPU, memory, disk, and network metrics directly from the
  Linux /proc filesystem and displays them as a live-updating terminal

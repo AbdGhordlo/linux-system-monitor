@@ -1,4 +1,4 @@
-name: sysmon
+name: linux-sysmon
 base: core24          # Ubuntu 24.04 LTS runtime base — matches current Ubuntu LTS
 version: '0.1.0'
 summary: Lightweight terminal system monitor for Linux

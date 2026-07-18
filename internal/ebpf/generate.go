@@ -27,4 +27,4 @@ package ebpf
 // The generated types will be: blockLatencyObjects, blockLatencyPrograms,
 // blockLatencyMaps (with fields TraceRqIssue, TraceRqComplete,
 // StartTimes, IoLatencyHist).
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -cflags "-O2 -g -Wall" blockLatency block_latency.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -tags ebpf -cc clang -cflags "-O2 -g -Wall" blockLatency block_latency.c
